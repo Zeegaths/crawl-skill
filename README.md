@@ -1,161 +1,145 @@
-# MatchSats ⚡
+# CrawlPay — Pay-per-fetch for AI Agents on Pharos
 
-> **AI Matchmaking + Lightning Escrow for Conferences.**
-> Built in Africa, for Africa.
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
+[![Pharos Atlantic Testnet](https://img.shields.io/badge/Pharos-Atlantic%20Testnet-00D4FF)](https://atlantic.pharosscan.xyz)
 
----
+Open-source pay-per-fetch infrastructure for the AI Agent economy. Publishers gate URLs behind a `402 Payment Required`; AI agents pay $0.0001 USDC per fetch using EIP-3009 gasless authorizations settled on **Pharos Atlantic Testnet**. Every fetch produces a portable signed receipt that feeds into **Anvita Flow KYA agent reputation**.
+
+Built for the **Pharos x Anvita Flow Skill-to-Agent Dual Cascade Hackathon 2026**.
+
+## Live Demo
+
+**https://crawlpay-pharos.vercel.app**
+
+Paste any Medium article URL and click "Fetch as Agent" to see the full x402 payment flow with real on-chain settlement on Pharos.
+
+## Deployed Contract
+
+```
+CrawlPayFacilitator: 0xc35C5df1F1cf18AeF636aB48bA8e6Dd00A795c1e
+Network:             Pharos Atlantic Testnet (Chain ID 688689)
+Deploy Tx:           0xd5c4ff459546e05645f2b0b31278cd0bf0e6949c15227279afb27bb947c1763d
+Explorer:            https://atlantic.pharosscan.xyz/address/0xc35C5df1F1cf18AeF636aB48bA8e6Dd00A795c1e
+```
 
 ## The Problem
 
-Conferences are expensive and wasted. Visibility gaps make it impossible to find the 1% of people who matter. Passive tools — WhatsApp groups, badge scans — fail because no-shows are free. There's no skin in the game.
+AI agents crawl the web but publishers earn nothing. Ads don't work on bots. Subscriptions don't scale to millions of agents. Stripe's $0.30 minimum makes sub-cent pricing impossible. There is no economic layer between AI and content.
 
 ## The Solution
 
-MatchSats introduces **Economic Integrity** to networking.
+CrawlPay makes $0.0001 per-fetch pricing viable:
 
-- **AI finds the match** — semantic analysis of your Nostr profile, skills, and intent
-- **Bitcoin Lightning Escrow ensures the follow-through** — both parties lock sats before the meeting. Show up, get refunded. Ghost, and they keep your sats.
+- **EIP-3009** — agent signs gasless USDC authorization off-chain. No gas, no transaction submitted.
+- **CrawlPayFacilitator.sol on Pharos** — verifies signature, records on-chain reputation, emits events.
+- **Anvita Flow KYA** — every receipt feeds the agent's on-chain reputation. Publishers can gate premium content to verified agents.
 
-> *"Remove Bitcoin and you have an app a VC already built. Keep it and you have something nobody else has shipped."*
-
----
-
-## How It Works
+## Protocol Flow
 
 ```
-1. Scan in via LNURL-auth       → your Lightning wallet is your identity
-2. Define your Digital Aura     → skills, intent, personality matrix
-3. Get AI-matched               → top 3 peers with IR-grade rationale
-4. Lock sats                    → both parties commit via Lightning hold invoice
-5. Meet                         → confirm attendance to release escrow
-6. Record & summarize           → Whisper transcription in English + Swahili
+1. Agent calls skill.fetch(url)
+2. Publisher proxy returns 402 + x402v2 offer ($0.0001 USDC)
+3. Agent signs EIP-3009 authorization (gasless, off-chain)
+4. Facilitator calls CrawlPayFacilitator.sol on Pharos
+5. Contract emits FetchAuthorized + ReputationUpdated
+6. Agent receives content + signed CrawlPayReceipt
+7. Receipt feeds Anvita Flow KYA reputation
 ```
 
----
+## Agent Integration
 
-## Escrow State Machine
+```typescript
+import { CrawlPaySkill } from "@crawlpay/skill";
 
-The **Confirm** tap is the only signal. Ambiguity always resolves in the user's favour.
+const skill = new CrawlPaySkill({
+  privateKey: process.env.AGENT_PRIVATE_KEY,
+  facilitatorUrl: "https://your-facilitator.com",
+  budget: 10000,
+});
 
-| Scenario | Person A | Person B | Outcome | LNbits Action |
-|:---|:---|:---|:---|:---|
-| **Both Confirm** | Tapped | Tapped | Full Refund | `cancelInvoice` ×2 |
-| **A Confirms, B Silent** | Tapped | No Action | B Penalised | `settleInvoice(B)`, `cancel(A)` |
-| **Neither Confirms** | No Action | No Action | Full Refund | `cancelInvoice` ×2 (Timeout) |
-| **Explicit Dispute** | Tapped | Either | Manual Review | Freeze / Manual Resolution |
+const { content, receipt } = await skill.fetch("https://example.com/article");
+```
 
----
+## Publisher Integration
+
+```typescript
+import { crawlPayGate } from "@crawlpay/proxy-middleware";
+
+app.use(crawlPayGate({
+  publisherWallet: "0xYourWallet",
+  facilitatorUrl: "https://your-facilitator.com",
+  pricePerFetch: 100,
+}));
+```
+
+## Repository Structure
+
+```
+crawlpay-pharos/
+├── contracts/
+│   ├── src/CrawlPayFacilitator.sol
+│   └── script/Deploy.s.sol
+├── packages/
+│   ├── skill/
+│   ├── proxy-middleware/
+│   ├── types/
+│   └── receipt-signer/
+├── apps/
+│   └── demo/
+└── SKILL.md
+```
+
+## Contract Interface
+
+```solidity
+function settle(
+    address agent,
+    address publisher,
+    bytes32 urlHash,
+    uint256 amount,
+    bytes32 nonce,
+    uint256 timestamp,
+    bytes calldata signature
+) external;
+
+function getReputation(address agent)
+    external view returns (
+        uint256 fetchCount,
+        uint256 totalSpent,
+        uint256 firstSeen,
+        uint256 lastSeen
+    );
+
+function isVerifiedAgent(address agent, uint256 minFetches)
+    external view returns (bool);
+```
+
+## Anvita Flow KYA Connection
+
+Every `settle()` call records the agent's fetch count and total USDC spent on-chain and emits `ReputationUpdated`. Publishers can gate premium content to verified agents using `isVerifiedAgent()`.
+
+## Phase 2 Roadmap
+
+Browser extension agent — intercepts 402 responses in any browser tab, signs via MetaMask, settles on Pharos, builds KYA reputation on Anvita Flow. Zero publisher integration required.
 
 ## Tech Stack
 
-### Identity
-- **LNURL-auth** — passwordless, wallet-based identity via Lightning. No email. No password.
+| Layer | Tools |
+|---|---|
+| Blockchain | Pharos Atlantic Testnet (Chain ID 688689) |
+| Smart Contract | Solidity 0.8.24, Foundry |
+| Payment Protocol | x402 v2, EIP-3009 |
+| Agent SDK | TypeScript, ethers.js v6 |
+| Demo | Next.js 15, Tailwind CSS |
 
-### Escrow
-- **LNbits Hold Invoices** — state-machine driven via BullMQ. Never settlement-first.
+## References
 
-### Data Layer
-- **Nostr** — NIP-01 profiles, decentralised event storage. Events signed via NIP-07 or temporary session keys.
-
-### AI Engine
-- **OpenAI API** — semantic matching & meeting summarisation
-- **OpenAI Whisper** — Swahili-native audio transcription
-- **Masakhane / AfroXLMR** — Yoruba / Amharic / Hausa NLP routing
-
-### Frontend
-- **Next.js 15** (PWA-ready)
-- **Tailwind CSS**, Lucide React, Radix UI
-
-### Backend
-- **Node.js**, SQLite (minimal state tracking), BullMQ
-
----
-
-## Language & Regional Intelligence
-
-MatchSats is built for the African market and respects its linguistic complexity.
-
-- **Code-switching** — recognises Kenyan Swahili-English-Sheng mixing via `lingua-py` segment tagging before LLM routing
-- **Sentiment calibration** — AfriSenti-calibrated logic (e.g. *"Poa sana"* = high praise / Positive)
-- **Sovereign aesthetic** — the UI evokes institutional trust, not crypto-degen culture
-
----
-
-## API
-
-| Endpoint | Description |
-|:---|:---|
-| `POST /api/match` | Triggers OpenAI to analyse Nostr profiles, returns top 3 matches + rationale |
-| `POST /api/invoices` | Creates a Lightning hold invoice for a meeting commitment |
-| `POST /api/invoices/:id/confirm` | Confirms attendance, triggers escrow resolution |
-
----
-
-## Pages
-
-| Route | Description |
-|:---|:---|
-| `/` | Landing page |
-| `/login` | LNURL-auth wallet connect |
-| `/profile` | Define Your Digital Aura |
-| `/matches` | AI-matched peers, active meetings |
-| `/matches/[id]` | Match detail, lock sats flow |
-| `/matches/[id]/review` | Post-meeting confirmation, transcription, escrow resolution |
-
----
-
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Run dev server
-npm run dev
-
-# Type check
-npm run type-check
-
-# Run tests
-npx playwright test
-```
-
-### Standards
-- **Files** — kebab-case (`escrow-handler.ts`)
-- **Variables** — camelCase
-- **TypeScript** — strict mode, no `any`, interfaces for all Nostr event structures
-- **Security** — always use Hold Invoices, never settlement-first
-- **Tests** — Playwright for PWA mobile flow, unit tests for BullMQ state transitions
-
----
-
-## Meeting Memory Flow
-
-```
-Audio recording
-    → OpenAI Whisper (transcription)
-    → lingua-py (language detection + segment tagging)
-    → AfroXLMR / OpenAI router (language-aware NLP)
-    → OpenAI Summariser
-    → Output in English + Swahili
-```
-
----
-
-## Contrast Scale (UI)
-
-| Role | Color |
-|:---|:---|
-| Headlines | `#fff` |
-| Body text | `#bbb` / `#aaa` |
-| Secondary | `#888` |
-| Labels | `#666` |
-| Dimmed | `#555` |
-
-Brand colors: `#cafd00` (lime) · `#9d7bb8` (purple) · `#0a0a0a` (background)
-
----
+- x402 Protocol: https://x402.org
+- EIP-3009: https://eips.ethereum.org/EIPS/eip-3009
+- Pharos Docs: https://docs.pharosnetwork.xyz
+- Anvita Flow: https://flow.anvita.xyz
+- Contract: https://atlantic.pharosscan.xyz/address/0xc35C5df1F1cf18AeF636aB48bA8e6Dd00A795c1e
 
 ## License
 
-Built in Nairobi. Powered by Lightning. ⚡
+Apache License 2.0
