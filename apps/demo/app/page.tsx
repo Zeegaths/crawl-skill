@@ -68,9 +68,7 @@ export default function Home() {
     <main className="min-h-screen bg-[#0A0F1E] text-[#F0EEE8] font-sans">
       <header className="border-b border-[#1E2A3A] px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-full bg-[#00D4FF] flex items-center justify-center">
-            <span className="text-[#0A0F1E] text-xs font-bold">C</span>
-          </div>
+          <img src="/crawl.png" alt="CrawlPay" className="w-8 h-8 rounded-lg" />
           <span className="font-mono font-semibold">CrawlPay</span>
           <span className="text-[#00D4FF] text-xs font-mono bg-[#00D4FF]/10 px-2 py-0.5 rounded">Pharos x Anvita Flow</span>
         </div>
