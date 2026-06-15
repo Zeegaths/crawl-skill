@@ -1,0 +1,11 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc = "0.8.24"
+
+[rpc_endpoints]
+pharos_atlantic = "https://testnet.dplabs-internal.com"
+
+[etherscan]
+pharos_atlantic = { key = "placeholder", url = "https://api.socialscan.io/pharos-atlantic-testnet/v1/explorer/command_api/contract" }

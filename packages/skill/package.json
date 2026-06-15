@@ -1,0 +1,14 @@
+{
+  "name": "@crawlpay/skill",
+  "version": "0.1.0",
+  "description": "Pharos Skill for AI agents — automatic x402 payment for paywalled URLs",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "keywords": ["pharos", "skill", "x402", "ai-agent", "anvita-flow", "usdc"],
+  "dependencies": {
+    "ethers": "^6.13.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

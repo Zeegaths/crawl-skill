@@ -1,0 +1,12 @@
+{
+  "name": "@crawlpay/proxy-middleware",
+  "version": "0.1.0",
+  "description": "Express/Next.js middleware to gate URLs behind CrawlPay x402 payments",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "keywords": ["pharos", "x402", "middleware", "publisher", "paywall"],
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "@types/express": "^4"
+  }
+}
