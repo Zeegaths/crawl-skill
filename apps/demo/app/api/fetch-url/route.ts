@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ethers } from "ethers";
 
+export const maxDuration = 30; // 30 second timeout for Vercel
+
 const PHAROS_RPC = process.env.PHAROS_RPC ?? "https://atlantic.dplabs-internal.com";
 const FACILITATOR_ADDRESS = process.env.FACILITATOR_ADDRESS ?? "0xc35C5df1F1cf18AeF636aB48bA8e6Dd00A795c1e";
 const FACILITATOR_PRIVATE_KEY = process.env.FACILITATOR_PRIVATE_KEY ?? "";
