@@ -1,7 +1,6 @@
-apps/facilitator
 apps/api-gateway
-packages/types
-packages/receipt-signer
-packages/proxy-middleware
-packages/skill
+apps/facilitator
+packages
 contracts
+turbo.json
+pnpm-workspace.yaml
